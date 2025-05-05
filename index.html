@@ -226,10 +226,15 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Dados de exemplo - na prática, isso viria de um banco de dados
-            let bookedSlots = JSON.parse(localStorage.getItem('bookedSlots')) || [];
-            let selectedSlot = null;
+            // Variáveis do DOM
+            const scheduleContainer = document.getElementById('schedule');
+            const submitBtn = document.getElementById('submitBtn');
+            const nameInput = document.getElementById('name');
+            const emailInput = document.getElementById('email');
+            const confirmation = document.getElementById('confirmation');
+            const confirmationText = document.getElementById('confirmationText');
             
+            // Configurações da agenda
             const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
             const timeSlots = [
                 '08:00 - 09:00',
@@ -242,47 +247,41 @@
                 '17:00 - 18:00'
             ];
             
-            const scheduleContainer = document.getElementById('schedule');
-            const submitBtn = document.getElementById('submitBtn');
-            const nameInput = document.getElementById('name');
-            const emailInput = document.getElementById('email');
-            const confirmation = document.getElementById('confirmation');
-            const confirmationText = document.getElementById('confirmationText');
-            
-            // Gerar a grade de horários
-            function generateSchedule() {
-                scheduleContainer.innerHTML = '';
-                
-                days.forEach(day => {
-                    const dayColumn = document.createElement('div');
-                    dayColumn.className = 'day-column';
-                    
-                    const dayHeader = document.createElement('div');
-                    dayHeader.className = 'day-header';
-                    dayHeader.textContent = day;
-                    dayColumn.appendChild(dayHeader);
-                    
-                    timeSlots.forEach(time => {
-                        const slotId = `${day}-${time}`;
-                        const isBooked = bookedSlots.some(slot => slot.id === slotId);
-                        
-                        const timeSlot = document.createElement('div');
-                        timeSlot.className = isBooked ? 'time-slot booked' : 'time-slot';
-                        timeSlot.textContent = time;
-                        timeSlot.dataset.id = slotId;
-                        
-                        if (!isBooked) {
-                            timeSlot.addEventListener('click', () => selectTimeSlot(timeSlot, slotId));
+            let selectedSlot = null;
+            const API_URL = 'https://script.google.com/macros/s/AKfycbz8JHvEJ_tKknThgDjfM5LdtAffnEMwDGEVnMDxQpM0yXRc-WFZZZneu_slemMnzkDGPQ/exec';
+    
+            // Função para carregar os agendamentos existentes
+            async function loadSchedule() {
+                try {
+                    const response = await fetch(`${API_URL}?action=get`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
                         }
-                        
-                        dayColumn.appendChild(timeSlot);
                     });
                     
-                    scheduleContainer.appendChild(dayColumn);
-                });
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        return {
+                            bookedSlots: data.data.map(item => ({
+                                id: `${item.day}-${item.time}`,
+                                name: item.name,
+                                email: item.email
+                            })),
+                            blockedSlots: [] // Horários bloqueados podem ser adicionados aqui
+                        };
+                    } else {
+                        console.error('Erro ao carregar agenda:', data.message);
+                        return { bookedSlots: [], blockedSlots: [] };
+                    }
+                } catch (error) {
+                    console.error('Erro de conexão:', error);
+                    return { bookedSlots: [], blockedSlots: [] };
+                }
             }
-            
-            // Selecionar um horário
+    
+            // Função para selecionar um horário
             function selectTimeSlot(element, slotId) {
                 // Remover seleção anterior
                 const previouslySelected = document.querySelector('.time-slot.selected');
@@ -297,7 +296,7 @@
                 // Habilitar botão de envio se os campos estiverem preenchidos
                 checkFormCompletion();
             }
-            
+    
             // Verificar se o formulário está completo
             function checkFormCompletion() {
                 const name = nameInput.value.trim();
@@ -306,45 +305,100 @@
                 
                 submitBtn.disabled = !(name && emailValid && selectedSlot);
             }
-            
+    
+            // Gerar a agenda
+            async function generateSchedule() {
+                const { bookedSlots, blockedSlots } = await loadSchedule();
+                
+                scheduleContainer.innerHTML = '';
+                
+                days.forEach(day => {
+                    const dayColumn = document.createElement('div');
+                    dayColumn.className = 'day-column';
+                    
+                    const dayHeader = document.createElement('div');
+                    dayHeader.className = 'day-header';
+                    dayHeader.textContent = day;
+                    dayColumn.appendChild(dayHeader);
+                    
+                    timeSlots.forEach(time => {
+                        const slotId = `${day}-${time}`;
+                        const isBooked = bookedSlots.some(slot => slot.id === slotId);
+                        const isBlocked = blockedSlots.includes(slotId);
+                        
+                        const timeSlot = document.createElement('div');
+                        timeSlot.className = isBooked ? 'time-slot booked' : 
+                                            isBlocked ? 'time-slot blocked' : 'time-slot';
+                        timeSlot.textContent = time;
+                        timeSlot.dataset.id = slotId;
+                        
+                        if (!isBooked && !isBlocked) {
+                            timeSlot.addEventListener('click', () => selectTimeSlot(timeSlot, slotId));
+                        }
+                        
+                        dayColumn.appendChild(timeSlot);
+                    });
+                    
+                    scheduleContainer.appendChild(dayColumn);
+                });
+            }
+    
+            // Evento de clique para reservar
+            submitBtn.addEventListener('click', async function() {
+                const name = nameInput.value.trim();
+                const email = emailInput.value.trim();
+                const [day, time] = selectedSlot.split('-');
+    
+                // Validação adicional
+                if (!name || !email || !selectedSlot) {
+                    alert('Por favor, preencha todos os campos e selecione um horário');
+                    return;
+                }
+    
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            day: day,
+                            time: time,
+                            name: name,
+                            email: email
+                        })
+                    });
+    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Mostrar confirmação
+                        confirmationText.innerHTML = `Olá ${name}, sua aula na <strong>${day}</strong> às <strong>${time}</strong> foi reservada com sucesso!<br>Enviamos os detalhes para ${email}.`;
+                        confirmation.style.display = 'block';
+                        
+                        // Resetar formulário
+                        nameInput.value = '';
+                        emailInput.value = '';
+                        selectedSlot = null;
+                        submitBtn.disabled = true;
+                        
+                        // Atualizar a agenda
+                        await generateSchedule();
+                        
+                        // Rolagem suave para a confirmação
+                        confirmation.scrollIntoView({ behavior: 'smooth' });
+                    } else {
+                        alert('Erro ao reservar: ' + (data.message || 'Tente novamente'));
+                    }
+                } catch (error) {
+                    alert('Erro de conexão: ' + error.message);
+                }
+            });
+    
             // Event listeners para campos de entrada
             nameInput.addEventListener('input', checkFormCompletion);
             emailInput.addEventListener('input', checkFormCompletion);
-            
-            // Enviar reserva
-            submitBtn.addEventListener('click', function() {
-                const name = nameInput.value.trim();
-                const email = emailInput.value.trim();
-                
-                // Adicionar aos horários reservados
-                bookedSlots.push({
-                    id: selectedSlot,
-                    name: name,
-                    email: email,
-                    timestamp: new Date().toISOString()
-                });
-                
-                // Salvar no localStorage (simulando banco de dados)
-                localStorage.setItem('bookedSlots', JSON.stringify(bookedSlots));
-                
-                // Mostrar confirmação
-                const [day, time] = selectedSlot.split('-');
-                confirmationText.innerHTML = `Olá ${name}, sua aula na <strong>${day}</strong> às <strong>${time}</strong> foi reservada com sucesso!<br>Enviamos os detalhes para ${email}.`;
-                confirmation.style.display = 'block';
-                
-                // Resetar formulário
-                nameInput.value = '';
-                emailInput.value = '';
-                selectedSlot = null;
-                submitBtn.disabled = true;
-                
-                // Atualizar a agenda
-                generateSchedule();
-                
-                // Rolagem suave para a confirmação
-                confirmation.scrollIntoView({ behavior: 'smooth' });
-            });
-            
+    
             // Inicializar a agenda
             generateSchedule();
         });
