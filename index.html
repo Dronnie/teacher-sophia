@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Sophia - Agendamento de Aulas de Inglês</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --pastel-blue: #a7c5eb;
+            --pastel-green: #b8e0d2;
+            --pastel-peach: #f7c1bb;
+            --pastel-lavender: #e3d0d8;
+            --pastel-yellow: #f5e6ca;
+            --text-color: #4a4a4a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Lato', sans-serif;
+        }
+
+        body {
+            background-color: #f9f9f9;
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-weight: 300;
+            font-size: 2.5rem;
+            color: var(--text-color);
+            margin-bottom: 1rem;
+        }
+
+        .description {
+            font-weight: 300;
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+
+        .booking-form {
+            background-color: white;
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 400;
+        }
+
+        input[type="text"],
+        input[type="email"] {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus {
+            outline: none;
+            border-color: var(--pastel-blue);
+        }
+
+        .schedule-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .day-column {
+            background-color: white;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .day-header {
+            text-align: center;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        .time-slot {
+            padding: 0.7rem;
+            margin-bottom: 0.5rem;
+            border-radius: 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background-color: var(--pastel-green);
+            color: var(--text-color);
+        }
+
+        .time-slot:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .time-slot.booked {
+            background-color: var(--pastel-peach);
+            cursor: not-allowed;
+            position: relative;
+        }
+
+        .time-slot.booked::after {
+            content: "Reservado";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(247, 193, 187, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .time-slot.selected {
+            background-color: var(--pastel-blue);
+            font-weight: 700;
+        }
+
+        .submit-btn {
+            background-color: var(--pastel-blue);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            display: block;
+            margin: 2rem auto 0;
+            width: 200px;
+            text-align: center;
+        }
+
+        .submit-btn:hover {
+            background-color: #8fb3e0;
+        }
+
+        .submit-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .confirmation {
+            text-align: center;
+            padding: 2rem;
+            background-color: var(--pastel-green);
+            border-radius: 10px;
+            margin-top: 2rem;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .schedule-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Agende sua Aula de Inglês</h1>
+            <p class="description">Selecione um horário disponível abaixo, preencha seus dados e reserve sua aula. Horários já reservados não aparecerão mais como disponíveis.</p>
+        </header>
+
+        <div class="booking-form">
+            <div class="form-group">
+                <label for="name">Seu Nome</label>
+                <input type="text" id="name" placeholder="Digite seu nome completo">
+            </div>
+            <div class="form-group">
+                <label for="email">Seu E-mail</label>
+                <input type="email" id="email" placeholder="Digite seu melhor e-mail">
+            </div>
+
+            <h2>Selecione um Horário</h2>
+            <div class="schedule-container" id="schedule">
+                <!-- Horários serão gerados via JavaScript -->
+            </div>
+
+            <button class="submit-btn" id="submitBtn" disabled>Reservar Aula</button>
+        </div>
+
+        <div class="confirmation" id="confirmation">
+            <h2>Reserva Confirmada!</h2>
+            <p id="confirmationText"></p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Dados de exemplo - na prática, isso viria de um banco de dados
+            let bookedSlots = JSON.parse(localStorage.getItem('bookedSlots')) || [];
+            let selectedSlot = null;
+            
+            const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
+            const timeSlots = [
+                '08:00 - 09:00',
+                '09:00 - 10:00',
+                '10:00 - 11:00',
+                '11:00 - 12:00',
+                '14:00 - 15:00',
+                '15:00 - 16:00',
+                '16:00 - 17:00',
+                '17:00 - 18:00'
+            ];
+            
+            const scheduleContainer = document.getElementById('schedule');
+            const submitBtn = document.getElementById('submitBtn');
+            const nameInput = document.getElementById('name');
+            const emailInput = document.getElementById('email');
+            const confirmation = document.getElementById('confirmation');
+            const confirmationText = document.getElementById('confirmationText');
+            
+            // Gerar a grade de horários
+            function generateSchedule() {
+                scheduleContainer.innerHTML = '';
+                
+                days.forEach(day => {
+                    const dayColumn = document.createElement('div');
+                    dayColumn.className = 'day-column';
+                    
+                    const dayHeader = document.createElement('div');
+                    dayHeader.className = 'day-header';
+                    dayHeader.textContent = day;
+                    dayColumn.appendChild(dayHeader);
+                    
+                    timeSlots.forEach(time => {
+                        const slotId = `${day}-${time}`;
+                        const isBooked = bookedSlots.some(slot => slot.id === slotId);
+                        
+                        const timeSlot = document.createElement('div');
+                        timeSlot.className = isBooked ? 'time-slot booked' : 'time-slot';
+                        timeSlot.textContent = time;
+                        timeSlot.dataset.id = slotId;
+                        
+                        if (!isBooked) {
+                            timeSlot.addEventListener('click', () => selectTimeSlot(timeSlot, slotId));
+                        }
+                        
+                        dayColumn.appendChild(timeSlot);
+                    });
+                    
+                    scheduleContainer.appendChild(dayColumn);
+                });
+            }
+            
+            // Selecionar um horário
+            function selectTimeSlot(element, slotId) {
+                // Remover seleção anterior
+                const previouslySelected = document.querySelector('.time-slot.selected');
+                if (previouslySelected) {
+                    previouslySelected.classList.remove('selected');
+                }
+                
+                // Selecionar novo
+                element.classList.add('selected');
+                selectedSlot = slotId;
+                
+                // Habilitar botão de envio se os campos estiverem preenchidos
+                checkFormCompletion();
+            }
+            
+            // Verificar se o formulário está completo
+            function checkFormCompletion() {
+                const name = nameInput.value.trim();
+                const email = emailInput.value.trim();
+                const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+                
+                submitBtn.disabled = !(name && emailValid && selectedSlot);
+            }
+            
+            // Event listeners para campos de entrada
+            nameInput.addEventListener('input', checkFormCompletion);
+            emailInput.addEventListener('input', checkFormCompletion);
+            
+            // Enviar reserva
+            submitBtn.addEventListener('click', function() {
+                const name = nameInput.value.trim();
+                const email = emailInput.value.trim();
+                
+                // Adicionar aos horários reservados
+                bookedSlots.push({
+                    id: selectedSlot,
+                    name: name,
+                    email: email,
+                    timestamp: new Date().toISOString()
+                });
+                
+                // Salvar no localStorage (simulando banco de dados)
+                localStorage.setItem('bookedSlots', JSON.stringify(bookedSlots));
+                
+                // Mostrar confirmação
+                const [day, time] = selectedSlot.split('-');
+                confirmationText.innerHTML = `Olá ${name}, sua aula na <strong>${day}</strong> às <strong>${time}</strong> foi reservada com sucesso!<br>Enviamos os detalhes para ${email}.`;
+                confirmation.style.display = 'block';
+                
+                // Resetar formulário
+                nameInput.value = '';
+                emailInput.value = '';
+                selectedSlot = null;
+                submitBtn.disabled = true;
+                
+                // Atualizar a agenda
+                generateSchedule();
+                
+                // Rolagem suave para a confirmação
+                confirmation.scrollIntoView({ behavior: 'smooth' });
+            });
+            
+            // Inicializar a agenda
+            generateSchedule();
+        });
+    </script>
+</body>
+</html>
